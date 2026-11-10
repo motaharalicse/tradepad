@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trade Pad – Kite</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --txt:#e8eaed; --mut:#9aa0aa; --buy:#16a34a; --sell:#dc2626; --acc:#387ed1; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--txt); }
+  main { max-width:460px; margin:0 auto; padding:16px; }
+  h1 { font-size:18px; margin:4px 0 12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .sig { font-size:20px; font-weight:700; }
+  .sig.buy { color:var(--buy); } .sig.sell { color:var(--sell); } .sig.exit { color:#eab308; }
+  .mut { color:var(--mut); font-size:13px; }
+  .row { display:flex; gap:8px; margin-top:8px; }
+  .row > * { flex:1; }
+  label { display:block; font-size:12px; color:var(--mut); margin-bottom:3px; }
+  input, select { width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:#0f1115; color:var(--txt); font-size:15px; }
+  .seg { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button { flex:1; padding:9px; background:transparent; color:var(--mut); border:0; font-size:15px; font-weight:600; }
+  .seg button.on.ce { background:var(--buy); color:#fff; } .seg button.on.pe { background:var(--sell); color:#fff; }
+  .sym { font:600 18px ui-monospace, Menlo, Consolas, monospace; letter-spacing:.5px; margin-top:10px; padding:10px; text-align:center; border:1px dashed var(--line); border-radius:8px; }
+  .btn { display:block; width:100%; padding:14px; margin-top:10px; border:0; border-radius:10px; font-size:17px; font-weight:700; color:#fff; background:var(--acc); }
+  .btn.exit { background:#a16207; }
+  .btn:disabled { opacity:.4; }
+  details summary { cursor:pointer; color:var(--mut); }
+  .note { font-size:12px; color:var(--mut); margin-top:8px; }
+  .ok { color:var(--buy); } .warn { color:#eab308; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Trade Pad → Kite</h1>
+
+  <div class="card" id="sigCard">
+    <div class="sig" id="sigTitle">No signal in link</div>
+    <div class="mut" id="sigInfo">Open this page from a TradingView alert link, or fill the order below.</div>
+    <div class="mut" id="returnMsg"></div>
+  </div>
+
+  <!-- ENTRY -->
+  <div class="card">
+    <div class="seg" id="typeSeg">
+      <button data-t="CE" class="ce">CE (Buy signal)</button>
+      <button data-t="PE" class="pe">PE (Sell signal)</button>
+    </div>
+    <div class="row">
+      <div><label>Strike</label><input id="strike" type="number" step="50" inputmode="numeric"></div>
+      <div><label>Expiry</label><input id="expiry" type="date"></div>
+    </div>
+    <div class="row">
+      <div><label>Lots</label><input id="lots" type="number" min="1" step="1" inputmode="numeric"></div>
+      <div><label>Order type</label>
+        <select id="otype"><option>MARKET</option><option>LIMIT</option></select></div>
+      <div><label>Limit price</label><input id="price" type="number" step="0.05" inputmode="decimal" disabled></div>
+    </div>
+    <div class="sym" id="sym">—</div>
+    <div class="mut" id="qtyTxt" style="text-align:center"></div>
+    <button class="btn" id="entryBtn">Open BUY in Kite</button>
+    <div class="note">Kite's own order window opens. Check the contract and quantity, then place it there. Nothing is placed until you confirm in Kite.</div>
+  </div>
+
+  <!-- EXIT -->
+  <div class="card">
+    <div><b>Open position (from this pad)</b></div>
+    <div class="mut" id="posTxt">None recorded</div>
+    <button class="btn exit" id="exitBtn" disabled>Open EXIT (SELL) in Kite</button>
+    <div class="note">The pad only knows positions you opened from it. Always confirm in Kite → Positions.</div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="card">
+    <details id="setDetails">
+      <summary>Settings</summary>
+      <div class="row"><div><label>Kite Connect API key</label><input id="apiKey" placeholder="from developers.kite.trade"></div></div>
+      <div class="row">
+        <div><label>Underlying</label><input id="und"></div>
+        <div><label>Strike step</label><input id="step" type="number"></div>
+      </div>
+      <div class="row">
+        <div><label>Lot size</label><input id="lotSize" type="number"></div>
+        <div><label>Default lots</label><input id="defLots" type="number" min="1"></div>
+      </div>
+      <div class="row">
+        <div><label>Strike offset (0 = ATM, 1 = 1 OTM)</label><input id="offset" type="number"></div>
+        <div><label>Product</label><select id="product"><option>MIS</option><option>NRML</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Weekly expiry day</label>
+          <select id="expDow"><option value="2">Tuesday</option><option value="4">Thursday</option><option value="1">Monday</option><option value="3">Wednesday</option><option value="5">Friday</option></select></div>
+        <div><label>On expiry day use</label>
+          <select id="expRoll"><option value="same">Today's expiry</option><option value="next">Next expiry</option></select></div>
+      </div>
+      <button class="btn" id="saveBtn" style="background:#374151">Save settings</button>
+      <div class="note">Check the lot size against Zerodha's contract details; it changes from time to time. Settings are saved in this browser only.</div>
+    </details>
+  </div>
+</main>
+
+<form id="kiteForm" method="post" action="https://kite.zerodha.com/connect/basket" style="display:none">
+  <input type="hidden" name="api_key" id="fApi">
+  <input type="hidden" name="data" id="fData">
+</form>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const DEF = { apiKey:"", und:"NIFTY", step:50, lotSize:65, defLots:1, offset:0, product:"MIS", expDow:2, expRoll:"same" };
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("tp_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem("tp_" + k, JSON.stringify(v)); } catch {} }
+  };
+  let cfg = Object.assign({}, DEF, store.get("cfg", {}));
+  let optType = "CE";
+
+  // ── Settings UI ──
+  const setFields = ["apiKey","und","step","lotSize","defLots","offset","product","expDow","expRoll"];
+  setFields.forEach(f => $(f).value = cfg[f]);
+  if (!cfg.apiKey) $("setDetails").open = true;
+  $("saveBtn").onclick = () => {
+    setFields.forEach(f => {
+      const v = $(f).value.trim();
+      cfg[f] = ["step","lotSize","defLots","offset","expDow"].includes(f) ? Number(v) : v;
+    });
+    cfg.und = cfg.und.toUpperCase();
+    store.set("cfg", cfg);
+    $("expiry").value = iso(nextExpiry());
+    render();
+    $("setDetails").open = false;
+  };
+
+  // ── Dates & symbols ──
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+  function nextExpiry() {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let add = (Number(cfg.expDow) - d.getDay() + 7) % 7;
+    if (add === 0 && cfg.expRoll === "next") add = 7;
+    d.setDate(d.getDate() + add);
+    return d;
+  }
+  // Kite NFO option symbols:
+  //   weekly : NIFTY + YY + M + DD + STRIKE + CE   (M = 1-9, O, N, D)   e.g. NIFTY26N1025000CE
+  //   monthly: NIFTY + YY + MON + STRIKE + CE                          e.g. NIFTY26NOV25000CE
+  function isMonthly(d) { const n = new Date(d); n.setDate(n.getDate() + 7); return n.getMonth() !== d.getMonth(); }
+  function symbol(d, strike, t) {
+    const yy = String(d.getFullYear()).slice(-2);
+    const m = d.getMonth() + 1;
+    if (isMonthly(d)) return cfg.und + yy + MON[m-1] + strike + t;
+    const mc = m < 10 ? String(m) : ({10:"O",11:"N",12:"D"})[m];
+    return cfg.und + yy + mc + String(d.getDate()).padStart(2,"0") + strike + t;
+  }
+  function expDate() {
+    const v = $("expiry").value;
+    if (!v) return null;
+    const [y,mo,da] = v.split("-").map(Number);
+    return new Date(y, mo-1, da);
+  }
+
+  // ── Signal from URL (?a=ENTRY&s=BUY&p=25012&t=25150&sl=24930 / ?a=EXIT&s=BUY&r=TARGET) ──
+  const q = new URLSearchParams(location.search);
+  const act = (q.get("a") || "").toUpperCase(), side = (q.get("s") || "").toUpperCase();
+  const spot = parseFloat(q.get("p"));
+
+  if (q.get("status") || q.get("request_token")) {
+    $("returnMsg").innerHTML = '<span class="ok">Back from Kite.</span> Check Kite → Orders to confirm the order went through.';
+  }
+
+  if (act === "ENTRY" && (side === "BUY" || side === "SELL")) {
+    optType = side === "BUY" ? "CE" : "PE";
+    $("sigTitle").textContent = (side === "BUY" ? "BUY signal → buy CE" : "SELL signal → buy PE");
+    $("sigTitle").className = "sig " + (side === "BUY" ? "buy" : "sell");
+    $("sigInfo").textContent = (isNaN(spot) ? "" : "Spot " + spot) +
+      (q.get("t") ? " · Target " + q.get("t") : "") + (q.get("sl") ? " · SL " + q.get("sl") : "");
+  } else if (act === "EXIT") {
+    $("sigTitle").textContent = "EXIT signal" + (q.get("r") ? " (" + q.get("r") + ")" : "");
+    $("sigTitle").className = "sig exit";
+    $("sigInfo").textContent = "Close your " + (side === "BUY" ? "CE" : side === "SELL" ? "PE" : "") + " position.";
+  }
+
+  // ── Entry form ──
+  const step = Number(cfg.step) || 50;
+  if (!isNaN(spot)) {
+    const atm = Math.round(spot / step) * step;
+    const off = Number(cfg.offset) || 0;
+    $("strike").value = optType === "CE" ? atm + off * step : atm - off * step;
+  }
+  $("strike").step = step;
+  $("expiry").value = iso(nextExpiry());
+  $("lots").value = cfg.defLots;
+
+  document.querySelectorAll("#typeSeg button").forEach(b => b.onclick = () => { optType = b.dataset.t; render(); });
+  ["strike","expiry","lots","price"].forEach(id => $(id).oninput = render);
+  $("otype").onchange = () => { $("price").disabled = $("otype").value !== "LIMIT"; render(); };
+
+  function currentSymbol() {
+    const d = expDate(), k = parseInt($("strike").value, 10);
+    return d && k ? symbol(d, k, optType) : null;
+  }
+  function qty() { return Math.max(1, parseInt($("lots").value, 10) || 1) * (Number(cfg.lotSize) || 1); }
+
+  function render() {
+    document.querySelectorAll("#typeSeg button").forEach(b => b.classList.toggle("on", b.dataset.t === optType));
+    const s = currentSymbol();
+    $("sym").textContent = s || "—";
+    $("qtyTxt").textContent = s ? "Qty " + qty() + " (" + ($("lots").value || 1) + " lot × " + cfg.lotSize + ") · " + cfg.product : "";
+    $("entryBtn").textContent = "Open BUY " + optType + " in Kite";
+    $("entryBtn").disabled = !s || !cfg.apiKey;
+    const pos = store.get("pos", null);
+    $("posTxt").textContent = pos ? pos.symbol + " · Qty " + pos.qty + " · opened " + pos.at : "None recorded";
+    $("exitBtn").disabled = !pos || !cfg.apiKey;
+    if (!cfg.apiKey) $("qtyTxt").innerHTML = '<span class="warn">Add your Kite API key in Settings.</span>';
+  }
+
+  function sendToKite(order) {
+    $("fApi").value = cfg.apiKey;
+    $("fData").value = JSON.stringify([order]);
+    $("kiteForm").submit();
+  }
+  function baseOrder(sym, txn, q) {
+    const o = { variety:"regular", exchange:"NFO", tradingsymbol:sym, transaction_type:txn,
+                order_type:$("otype").value, quantity:q, product:cfg.product, tag:"tradepad" };
+    if (o.order_type === "LIMIT") o.price = parseFloat($("price").value) || 0;
+    return o;
+  }
+
+  $("entryBtn").onclick = () => {
+    const s = currentSymbol(); if (!s) return;
+    const q = qty();
+    store.set("pos", { symbol:s, qty:q, at:new Date().toLocaleTimeString() });
+    sendToKite(baseOrder(s, "BUY", q));
+  };
+  $("exitBtn").onclick = () => {
+    const pos = store.get("pos", null); if (!pos) return;
+    store.set("pos", null);
+    sendToKite(baseOrder(pos.symbol, "SELL", pos.qty));
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
